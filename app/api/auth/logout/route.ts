@@ -15,7 +15,7 @@ export async function POST() {
   // Clear the session cookie
   response.cookies.set('mespod_session', '', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     sameSite: 'lax',
     maxAge: 0,
     path: '/',

@@ -31,12 +31,9 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (data.success) {
-        // Redirect based on role
-        if (data.user?.role === 'ADMIN') {
-          router.push('/admin');
-        } else {
-          router.push('/app');
-        }
+        // Hard redirect to ensure cookie is set
+        const redirectUrl = data.user?.role === 'ADMIN' ? '/admin' : '/app';
+        window.location.href = redirectUrl;
       } else {
         setError(data.message || 'Giriş başarısız');
       }

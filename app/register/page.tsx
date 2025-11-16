@@ -42,9 +42,11 @@ export default function RegisterPage() {
         const loginData = await loginResponse.json();
 
         if (loginData.success) {
-          router.push(loginData.user?.role === 'ADMIN' ? '/admin' : '/app');
+          // Hard redirect to ensure cookie is set
+          const redirectUrl = loginData.user?.role === 'ADMIN' ? '/admin' : '/app';
+          window.location.href = redirectUrl;
         } else {
-          router.push('/login');
+          window.location.href = '/login';
         }
       } else {
         setError(data.message || 'Kayıt başarısız');
