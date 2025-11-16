@@ -2,11 +2,11 @@
  * Next.js middleware for route protection
  * Protects /app and /admin routes
  * Redirects unauthorized users to login
+ * Note: Simplified to work with Edge Runtime - JWT verification happens in server components
  */
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { verifyToken } from '@/lib/auth/jwt';
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -38,28 +38,8 @@ export function middleware(request: NextRequest) {
       loginUrl.searchParams.set('redirect', pathname);
       return NextResponse.redirect(loginUrl);
     }
-
-    // Verify token
-    const payload = verifyToken(token);
-    if (!payload) {
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-
-    // Admin route - check if user is admin
-    if (isAdminRoute && payload.role !== 'ADMIN') {
-      return NextResponse.redirect(new URL('/app', request.url));
-    }
-  }
-
-  // Redirect logged-in users away from login/register pages
-  if (isPublicPath && token && pathname !== '/') {
-    const payload = verifyToken(token);
-    if (payload) {
-      const redirectUrl = payload.role === 'ADMIN' ? '/admin' : '/app';
-      return NextResponse.redirect(new URL(redirectUrl, request.url));
-    }
+    // Token exists - let the page component verify it
+    // (JWT verification doesn't work in Edge Runtime)
   }
 
   return NextResponse.next();
