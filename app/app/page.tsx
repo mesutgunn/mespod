@@ -18,6 +18,35 @@ interface Project {
   createdAt: string;
   designs: Design[];
   _count: { designs: number };
+  
+  // Etsy Scraper Data
+  productId?: string;
+  shopId?: string;
+  shopUrl?: string;
+  shopSales?: string;
+  shopName?: string;
+  image?: string;
+  images?: string[];
+  maxQuantity?: number;
+  description?: string[];
+  deliveryDaysMin?: number;
+  deliveryDaysMax?: number;
+  shopReviews?: number;
+  reviews?: number;
+  star?: string;
+  highlightsTags?: string[];
+  reviewsTags?: any;
+  yearsOnEtsy?: string;
+  hasRatingsBadge?: boolean;
+  hasConvosBadge?: boolean;
+  hasShippingBadge?: boolean;
+  reviewsScores?: any;
+  category?: string;
+  price?: string;
+  lowPrice?: string;
+  highPrice?: string;
+  countryShippingFrom?: string;
+  currency?: string;
 }
 
 interface Design {
@@ -97,36 +126,55 @@ export default function UserAppPage() {
     
     setLoading(true);
     try {
-      const projectRes = await fetch('/api/projects', {
+      // Call webhook endpoint to scrape Etsy data
+      const webhookRes = await fetch('/api/webhook', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ etsyUrl }),
-      });
-      const project = await projectRes.json();
-      setCurrentProject(project);
-
-      const res = await fetch('/api/mespod/etsy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: etsyUrl }),
-      });
-      const data = await res.json();
-      
-      await fetch(`/api/projects/${project.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          etsyTitle: data.title,
-          etsyDesc: data.description,
-          etsyTags: data.tags,
-        }),
+        body: JSON.stringify({ direct_urls: [etsyUrl] }),
       });
       
-      alert('Etsy analizi tamamlandı! Şimdi tasarımlar sekmesine gidin.');
-      setActiveTab('designs');
-      loadProjects();
+      if (!webhookRes.ok) {
+        throw new Error('Webhook request failed');
+      }
+      
+      const webhookData = await webhookRes.json();
+      
+      if (webhookData.success && webhookData.project) {
+        setCurrentProject(webhookData.project);
+        alert('Etsy ürün verisi başarıyla alındı!');
+        setActiveTab('projects');
+        loadProjects();
+      } else {
+        throw new Error('Failed to process webhook data');
+      }
     } catch (error) {
-      alert('Etsy analizi başarısız!');
+      console.error('Project creation error:', error);
+      alert('Etsy analizi başarısız! Lütfen tekrar deneyin.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteProject = async (projectId: string) => {
+    if (!confirm('Bu projeyi silmek istediğinizden emin misiniz?')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        alert('Proje başarıyla silindi!');
+        loadProjects();
+      } else {
+        throw new Error('Silme işlemi başarısız');
+      }
+    } catch (error) {
+      console.error('Delete project error:', error);
+      alert('Proje silinemedi!');
     } finally {
       setLoading(false);
     }
@@ -331,7 +379,11 @@ export default function UserAppPage() {
                   </div>
                   <div className="p-6 space-y-4">
                     {projects.slice(0, 5).map((project) => (
-                      <div key={project.id} className="flex justify-between items-center">
+                      <div 
+                        key={project.id} 
+                        onClick={() => router.push(`/projects/${project.id}`)}
+                        className="flex justify-between items-center hover:bg-gray-50 p-2 rounded-lg cursor-pointer transition"
+                      >
                         <p className="text-sm font-medium text-[#111827] truncate pr-4">
                           {project.etsyTitle || 'Başlıksız Proje'}
                         </p>
@@ -415,32 +467,69 @@ export default function UserAppPage() {
 
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {projects.map((project) => (
-                  <div key={project.id} className="bg-white rounded-xl border border-[#E5E7EB] shadow-sm p-6 hover:shadow-md transition">
-                    <div className="flex justify-between items-start mb-4">
-                      <h3 className="font-semibold text-lg line-clamp-2">
-                        {project.etsyTitle || 'Başlıksız Proje'}
-                      </h3>
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        project.status === 'completed'
-                          ? 'bg-green-100 text-green-800'
-                          : project.status === 'processing'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {project.status}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-4">{project._count.designs} tasarım</p>
-                    <p className="text-xs text-gray-500 mb-4">
-                      {new Date(project.createdAt).toLocaleDateString('tr-TR')}
-                    </p>
-                    <div className="flex gap-2">
-                      <button className="flex-1 px-4 py-2 bg-[#4F46E5] text-white rounded-lg hover:bg-[#4338CA] text-sm">
-                        Görüntüle
-                      </button>
-                      <button className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 text-sm">
-                        Sil
-                      </button>
+                  <div key={project.id} className="bg-white rounded-xl border border-[#E5E7EB] shadow-sm overflow-hidden hover:shadow-md transition">
+                    {/* Product Image */}
+                    {project.image && (
+                      <div className="w-full h-48 bg-gray-100">
+                        <img
+                          src={project.image}
+                          alt={project.etsyTitle || 'Product'}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    
+                    <div className="p-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <h3 className="font-semibold text-lg line-clamp-2 flex-1 pr-2">
+                          {project.etsyTitle || 'Başlıksız Proje'}
+                        </h3>
+                        <span className={`px-2 py-1 rounded-full text-xs whitespace-nowrap ${
+                          project.status === 'completed'
+                            ? 'bg-green-100 text-green-800'
+                            : project.status === 'processing'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {project.status}
+                        </span>
+                      </div>
+                      
+                      {/* Product Info */}
+                      <div className="space-y-2 mb-4">
+                        {project.star && (
+                          <p className="text-sm text-gray-600">⭐ {project.star} ({project.reviews} yorum)</p>
+                        )}
+                        {project.lowPrice && (
+                          <p className="text-sm font-semibold text-gray-900">
+                            {project.lowPrice} - {project.highPrice} {project.currency}
+                          </p>
+                        )}
+                        <p className="text-sm text-gray-600">{project._count.designs} tasarım</p>
+                      </div>
+                      
+                      <p className="text-xs text-gray-500 mb-4">
+                        {new Date(project.createdAt).toLocaleDateString('tr-TR')}
+                      </p>
+                      
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => router.push(`/projects/${project.id}`)}
+                          className="flex-1 px-4 py-2 bg-[#4F46E5] text-white rounded-lg hover:bg-[#4338CA] text-sm"
+                        >
+                          Görüntüle
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteProject(project.id);
+                          }}
+                          disabled={loading}
+                          className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 text-sm disabled:opacity-50"
+                        >
+                          Sil
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}

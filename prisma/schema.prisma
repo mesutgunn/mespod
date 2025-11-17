@@ -34,17 +34,51 @@ model Settings {
 }
 
 model Project {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  etsyUrl     String
-  etsyTitle   String?
-  etsyDesc    String?
-  etsyTags    String[] // Array of tags
-  status      String   @default("processing") // processing, completed, failed
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  designs     Design[]
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  etsyUrl             String
+  etsyTitle           String?
+  etsyDesc            String?
+  etsyTags            String[] // Array of tags
+  status              String   @default("processing") // processing, completed, failed
+  
+  // Etsy Scraper Data
+  productId           String?
+  shopId              String?
+  shopUrl             String?
+  shopSales           String?
+  shopName            String?
+  searchPosition      String?
+  image               String?
+  images              String[] // Array of image URLs
+  maxQuantity         Int?
+  variants            Json?    // Store variants as JSON
+  description         String[] // Array of description lines
+  deliveryDaysMin     Int?
+  deliveryDaysMax     Int?
+  shopReviews         Int?
+  reviews             Int?
+  star                String?
+  highlightsTags      String[] // Array of highlight tags
+  reviewsTags         Json?    // Store review tags as JSON
+  yearsOnEtsy         String?
+  hasRatingsBadge     Boolean?
+  hasConvosBadge      Boolean?
+  hasShippingBadge    Boolean?
+  reviewsScores       Json?    // Store review scores as JSON
+  category            String?
+  price               String?
+  lowPrice            String?
+  highPrice           String?
+  countryShippingFrom String?
+  currency            String?
+  oldPrice            String?
+  moreLikeUrl         String?
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  designs             Design[]
 }
 
 model Design {
